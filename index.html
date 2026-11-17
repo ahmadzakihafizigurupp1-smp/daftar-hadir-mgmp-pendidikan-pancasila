@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>Kehadiran MGMP Pendidikan Pancasila Kabupaten Tabalong</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .hero-bg { background: radial-gradient(circle at 85% 20%, rgba(45,212,191,.25), transparent 30%), linear-gradient(120deg,#0f3d42 0%,#0f766e 55%,#115e59 100%); }
+    .soft-shadow { box-shadow: 0 12px 34px rgba(15, 23, 42, .07); }
+    .nav-active { background:#ccfbf1; color:#115e59; }
+    .stat-card { background: linear-gradient(145deg,#fff,#f8fafc); }
+    .table-wrap { overflow-x:auto; }
+    .table-wrap table { min-width:780px; }
+    .table-wrap th { white-space:nowrap; }
+    .field { width:100%; border:1px solid #cbd5e1; border-radius:12px; padding:10px 12px; background:#fff; outline:none; }
+    .field:focus { border-color:#0f766e; box-shadow:0 0 0 3px rgba(13,148,136,.12); }
+    .btn-primary { background:#0f766e; color:white; }
+    .btn-primary:hover { background:#115e59; }
+    .btn-soft { background:#f1f5f9; color:#334155; }
+    .btn-soft:hover { background:#e2e8f0; }
+    .status-hadir { background:#dcfce7;color:#166534; }
+    .status-sakit { background:#fef3c7;color:#92400e; }
+    .status-izin { background:#dbeafe;color:#1d4ed8; }
+    .status-tidak { background:#fee2e2;color:#b91c1c; }
+    .status-belum { background:#f1f5f9;color:#64748b; }
+    .spinner { width:18px;height:18px;border:2px solid #cbd5e1;border-top-color:#0f766e;border-radius:50%;animation:spin .8s linear infinite;display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @media print { header, .no-print, #toast { display:none !important; } body { background:#fff; } .soft-shadow { box-shadow:none; } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <header class="hero-bg text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-2xl"><i class="fa-solid fa-people-group"></i></div>
+          <div>
+            <p class="text-teal-100 text-xs sm:text-sm tracking-[.18em] uppercase font-semibold">Sistem Informasi Kehadiran</p>
+            <h1 class="font-bold text-xl sm:text-2xl tracking-tight">MGMP Pendidikan Pancasila</h1>
+            <p class="text-teal-100 text-sm">Kabupaten Tabalong · Periode Kepengurusan 2026–2028</p>
+          </div>
+        </div>
+        <nav class="no-print flex items-center gap-2 bg-black/10 p-1.5 rounded-2xl self-start md:self-auto">
+          <button id="nav-dashboard" onclick="showTab('dashboard')" class="nav-active rounded-xl px-4 py-2 text-sm font-semibold transition"><i class="fa-solid fa-chart-pie mr-2"></i>Dashboard</button>
+          <button id="nav-admin" onclick="showTab('admin')" class="rounded-xl px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition"><i class="fa-solid fa-user-shield mr-2"></i>Administrator</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-7 sm:py-9">
+    <div id="connectionBanner" class="hidden mb-5 rounded-2xl border p-4 text-sm"></div>
+    <div id="loadingState" class="bg-white rounded-2xl soft-shadow p-8 text-center">
+      <span class="spinner mb-3"></span>
+      <p class="font-semibold text-slate-700">Menyiapkan data kehadiran...</p>
+      <p class="text-sm text-slate-500 mt-1">Menghubungkan aplikasi dengan Google Sheets</p>
+    </div>
+
+    <section id="page-dashboard" class="hidden space-y-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <p class="text-teal-700 text-sm font-semibold">RINGKASAN KEGIATAN</p>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Dashboard Kehadiran</h2>
+          <p class="text-slate-500 mt-1">Pantau partisipasi dan perkembangan kehadiran anggota MGMP.</p>
+        </div>
+        <div class="no-print flex flex-col sm:flex-row gap-2">
+          <select id="filterMonth" class="field sm:w-52" onchange="changeDashboardFilter()">
+            <option value="all">Semua periode</option>
+          </select>
+          <button onclick="refreshData()" class="btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold"><i class="fa-solid fa-rotate mr-2"></i>Perbarui data</button>
+        </div>
+      </div>
+      <div id="dashboardContent"></div>
+    </section>
+
+    <section id="page-admin" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <p class="text-teal-700 text-sm font-semibold">PENGELOLAAN DATA</p>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Administrator</h2>
+          <p class="text-slate-500 mt-1">Input, perbarui, dan koreksi data kehadiran pertemuan MGMP.</p>
+        </div>
+        <div id="adminSessionInfo" class="text-sm text-slate-500"></div>
+      </div>
+      <div id="adminContent"></div>
+    </section>
+
+    <footer class="mt-10 border-t border-slate-200 pt-5 text-center text-xs text-slate-400">
+      <p>© 2026 MGMP Pendidikan Pancasila Kabupaten Tabalong</p>
+      <p class="mt-1">Data kehadiran dikelola melalui Google Sheets.</p>
+    </footer>
+  </main>
+
+  <div id="toast" class="fixed bottom-4 right-4 z-50 hidden max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-xl"></div>
+
+  <script>
+    // GANTI dengan URL Web App Google Apps Script setelah deployment.
+    const API_URL = "https://script.google.com/macros/s/AKfycbw2zVAuNUhDKrq4kixdAxK0Q5MNgLaZ2jXWCs5Y4QJBVSsXNaKf5FlsHzufq8PTBJITwA/exec";
+    const STATUS_OPTIONS = ["Hadir", "Sakit", "Izin", "Tidak Hadir"];
+    let STORE = { members: [], meetings: [], attendance: [] };
+    let adminToken = sessionStorage.getItem("mgmp_admin_token") || "";
+    let currentTab = "dashboard";
+    let dashboardMonth = "all";
+    let dashboardSearch = "";
+    let selectedMemberId = "";
+    let editor = freshEditor();
+
+    function freshEditor() {
+      const now = new Date();
+      const today = [now.getFullYear(), String(now.getMonth()+1).padStart(2,"0"), String(now.getDate()).padStart(2,"0")].join("-");
+      return { meetingId:"", date:today, title:"", topic:"", place:"", notes:"", statuses:{}, memberNotes:{}, search:"" };
+    }
+    function apiConfigured() { return API_URL && !API_URL.includes("TEMPEL_URL_"); }
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    }
+    function showToast(message, type="success") {
+      const el = document.getElementById("toast");
+      el.className = "fixed bottom-4 right-4 z-50 max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-xl " + (type === "error" ? "bg-red-600 text-white" : type === "info" ? "bg-slate-800 text-white" : "bg-teal-700 text-white");
+      el.textContent = message;
+      el.classList.remove("hidden");
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => el.classList.add("hidden"), 4000);
+    }
+    function setBanner(message, type="info") {
+      const el = document.getElementById("connectionBanner");
+      el.className = "mb-5 rounded-2xl border p-4 text-sm " + (type === "error" ? "bg-red-50 border-red-200 text-red-800" : type === "success" ? "bg-teal-50 border-teal-200 text-teal-800" : "bg-amber-50 border-amber-200 text-amber-900");
+      el.innerHTML = message;
+      el.classList.remove("hidden");
+    }
+    function hideBanner() { document.getElementById("connectionBanner").classList.add("hidden"); }
+
+    // Apps Script dipanggil menggunakan JSONP agar halaman GitHub Pages dapat berkomunikasi lintas domain.
+    function apiCall(action, params={}) {
+      return new Promise((resolve, reject) => {
+        if (!apiConfigured()) return reject(new Error("URL Web App belum dipasang pada variabel API_URL di index.html."));
+        const callback = "mgmp_jsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+        const query = new URLSearchParams({ action, callback });
+        Object.entries(params).forEach(([key, value]) => query.set(key, String(value ?? "")));
+        const script = document.createElement("script");
+        let finished = false;
+        const cleanup = () => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          delete window[callback];
+          script.remove();
+        };
+        window[callback] = response => {
+          cleanup();
+          if (response && response.ok) resolve(response.data);
+          else reject(new Error(response && response.message ? response.message : "Respons server tidak dikenali."));
+        };
+        script.onerror = () => { cleanup(); reject(new Error("Tidak dapat menghubungi Google Apps Script. Periksa URL deployment dan akses Web App.")); };
+        const timer = setTimeout(() => { cleanup(); reject(new Error("Permintaan melewati batas waktu. Periksa koneksi internet atau deployment Apps Script.")); }, 20000);
+        script.src = API_URL + (API_URL.includes("?") ? "&" : "?") + query.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadData() {
+      document.getElementById("loadingState").classList.remove("hidden");
+      document.getElementById("page-dashboard").classList.add("hidden");
+      if (!apiConfigured()) {
+        document.getElementById("loadingState").classList.add("hidden");
+        setBanner("<strong>Aplikasi belum terhubung.</strong> Setelah menempelkan kode <b>Code.gs</b> ke Apps Script dan melakukan deployment sebagai Web App, tempel URL deployment pada konstanta <code>API_URL</code> di bagian atas file <code>index.html</code>.", "warning");
+        renderDashboard();
+        document.getElementById("page-dashboard").classList.toggle("hidden", currentTab !== "dashboard");
+        document.getElementById("page-admin").classList.toggle("hidden", currentTab !== "admin");
+        renderAdmin();
+        return;
+      }
+      try {
+        const data = await apiCall("bootstrap");
+        STORE = data || STORE;
+        document.getElementById("loadingState").classList.add("hidden");
+        hideBanner();
+        fillMonthFilter();
+        renderDashboard();
+        renderAdmin();
+        document.getElementById("page-dashboard").classList.toggle("hidden", currentTab !== "dashboard");
+        document.getElementById("page-admin").classList.toggle("hidden", currentTab !== "admin");
+      } catch (error) {
+        document.getElementById("loadingState").classList.add("hidden");
+        setBanner("<strong>Gagal memuat data.</strong> " + escapeHtml(error.message) + " Pastikan Apps Script sudah dijalankan melalui fungsi <code>setup()</code> dan Web App telah di-deploy dengan akses yang sesuai.", "error");
+        renderDashboard();
+        renderAdmin();
+        document.getElementById("page-dashboard").classList.toggle("hidden", currentTab !== "dashboard");
+        document.getElementById("page-admin").classList.toggle("hidden", currentTab !== "admin");
+      }
+    }
+    async function refreshData() {
+      try { await loadData(); showToast("Permintaan pembaruan data selesai.", "info"); }
+      catch (e) { showToast(e.message, "error"); }
+    }
+    function fillMonthFilter() {
+      const select = document.getElementById("filterMonth");
+      if (!select) return;
+      const old = dashboardMonth;
+      const months = [...new Set(STORE.meetings.map(m => String(m.date || "").slice(0,7)).filter(Boolean))].sort().reverse();
+      select.innerHTML = '<option value="all">Semua periode</option>' + months.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(monthLabel(m))}</option>`).join("");
+      select.value = months.includes(old) || old === "all" ? old : "all";
+      dashboardMonth = select.value;
+    }
+    function monthLabel(value) {
+      if (!value || !/^\d{4}-\d{2}$/.test(value)) return value;
+      const [y,m] = value.split("-").map(Number);
+      return new Date(y,m-1,1).toLocaleDateString("id-ID", {month:"long", year:"numeric"});
+    }
+    function formatDate(value) {
+      if (!value) return "—";
+      const raw = String(value).slice(0,10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return escapeHtml(value);
+      const [y,m,d] = raw.split("-").map(Number);
+      return new Date(y,m-1,d).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"});
+    }
+    function pct(value) { return (Number(value) || 0).toLocaleString("id-ID", {maximumFractionDigits:1, minimumFractionDigits:0}) + "%"; }
+    function badge(status) {
+      const cls = status === "Hadir" ? "status-hadir" : status === "Sakit" ? "status-sakit" : status === "Izin" ? "status-izin" : status === "Tidak Hadir" ? "status-tidak" : "status-belum";
+      return `<span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${cls}">${escapeHtml(status || "Belum diisi")}</span>`;
+    }
+    function iconCard(icon, label, value, note, color="teal") {
+      const colors = {teal:"bg-teal-50 text-teal-700",blue:"bg-blue-50 text-blue-700",amber:"bg-amber-50 text-amber-700",rose:"bg-rose-50 text-rose-700",slate:"bg-slate-100 text-slate-700"};
+      return `<div class="stat-card rounded-2xl border border-slate-200 p-4 sm:p-5 soft-shadow"><div class="flex items-center justify-between"><div class="text-sm text-slate-500">${label}</div><div class="w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}"><i class="fa-solid ${icon}"></i></div></div><div class="mt-3 text-2xl sm:text-3xl font-bold text-slate-900">${value}</div><div class="mt-1 text-xs text-slate-400">${note}</div></div>`;
+    }
+    function getFilteredData() {
+      const meetings = STORE.meetings.filter(m => dashboardMonth === "all" || String(m.date || "").startsWith(dashboardMonth));
+      const meetingIds = new Set(meetings.map(m => m.id));
+      const attendance = STORE.attendance.filter(a => meetingIds.has(a.meetingId));
+      const members = STORE.members.filter(m => m.active !== false);
+      return {meetings, attendance, members};
+    }
+    function renderDashboard() {
+      const root = document.getElementById("dashboardContent");
+      if (!root) return;
+      const {meetings, attendance, members} = getFilteredData();
+      const expected = meetings.length * members.length;
+      const counts = {"Hadir":0,"Sakit":0,"Izin":0,"Tidak Hadir":0};
+      attendance.forEach(a => { if (counts[a.status] !== undefined) counts[a.status]++; });
+      const presentRate = expected ? counts.Hadir / expected * 100 : 0;
+      const complete = Math.min(attendance.length, expected);
+      const attendanceMap = new Map(attendance.map(a => [`${a.meetingId}|${a.memberId}`, a]));
+      const q = dashboardSearch.trim().toLowerCase();
+      const allMemberStats = members.map(member => {
+        const rows = meetings.map(mt => attendanceMap.get(`${mt.id}|${member.id}`)).filter(Boolean);
+        const c = {Hadir:0,Sakit:0,Izin:0,"Tidak Hadir":0};
+        rows.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
+        return {...member, ...c, missing:Math.max(0, meetings.length-rows.length), rate:meetings.length ? c.Hadir/meetings.length*100 : 0};
+      }).sort((a,b) => b.rate-a.rate || a.name.localeCompare(b.name,"id"));
+      const memberStats = allMemberStats.filter(m => !q || (m.name + " " + m.school).toLowerCase().includes(q));
+      const chosenId = selectedMemberId && members.some(m => m.id === selectedMemberId) ? selectedMemberId : (members[0]?.id || "");
+      selectedMemberId = chosenId;
+      const chosen = members.find(m => m.id === chosenId);
+      const chosenStats = allMemberStats.find(m => m.id === chosenId) || (chosen ? {...chosen,Hadir:0,Sakit:0,Izin:0,"Tidak Hadir":0,missing:meetings.length,rate:0} : null);
+      const recentMeetings = [...meetings].sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,6);
+      const memberDetail = chosen ? meetings.map(mt => ({meeting:mt, record:attendanceMap.get(`${mt.id}|${chosen.id}`)})).sort((a,b) => String(b.meeting.date).localeCompare(String(a.meeting.date))) : [];
+
+      root.innerHTML = `
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+          ${iconCard("fa-calendar-days","Total pertemuan",meetings.length,"Kegiatan pada periode terpilih","teal")}
+          ${iconCard("fa-users","Anggota aktif",members.length,"Berdasarkan daftar anggota","blue")}
+          ${iconCard("fa-user-check","Total kehadiran",counts.Hadir,"Akumulasi status Hadir","teal")}
+          ${iconCard("fa-chart-line","Tingkat kehadiran",pct(presentRate),`${complete} dari ${expected} data terisi`,presentRate>=75?"teal":"amber")}
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="flex justify-between text-sm text-slate-500"><span>Hadir</span><i class="fa-solid fa-circle-check text-green-600"></i></div><div class="text-2xl font-bold mt-1">${counts.Hadir}</div></div>
+          <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="flex justify-between text-sm text-slate-500"><span>Sakit</span><i class="fa-solid fa-notes-medical text-amber-600"></i></div><div class="text-2xl font-bold mt-1">${counts.Sakit}</div></div>
+          <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="flex justify-between text-sm text-slate-500"><span>Izin</span><i class="fa-solid fa-envelope-open-text text-blue-600"></i></div><div class="text-2xl font-bold mt-1">${counts.Izin}</div></div>
+          <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="flex justify-between text-sm text-slate-500"><span>Tidak Hadir</span><i class="fa-solid fa-circle-xmark text-red-600"></i></div><div class="text-2xl font-bold mt-1">${counts["Tidak Hadir"]}</div></div>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div class="xl:col-span-2 bg-white border border-slate-200 rounded-2xl soft-shadow overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div><h3 class="font-bold text-lg">Rekap Kehadiran Anggota</h3><p class="text-sm text-slate-500">Persentase dihitung dari jumlah status Hadir dibandingkan seluruh pertemuan.</p></div>
+              <input class="field sm:w-60 no-print" placeholder="Cari nama atau sekolah..." value="${escapeHtml(dashboardSearch)}" oninput="setDashboardSearch(this.value)" />
+            </div>
+            <div class="table-wrap"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-3">Anggota</th><th class="text-center p-3">Hadir</th><th class="text-center p-3">Sakit</th><th class="text-center p-3">Izin</th><th class="text-center p-3">Tidak Hadir</th><th class="text-center p-3">Belum diisi</th><th class="text-center p-3">Persentase</th></tr></thead><tbody>
+            ${memberStats.length ? memberStats.map((m,i)=>`<tr class="border-t border-slate-100 hover:bg-slate-50/70"><td class="p-3"><div class="font-semibold text-slate-800">${i+1}. ${escapeHtml(m.name)}</div><div class="text-xs text-slate-400 mt-0.5">${escapeHtml(m.school)}</div></td><td class="text-center p-3 font-semibold text-green-700">${m.Hadir}</td><td class="text-center p-3">${m.Sakit}</td><td class="text-center p-3">${m.Izin}</td><td class="text-center p-3">${m["Tidak Hadir"]}</td><td class="text-center p-3 text-slate-400">${m.missing}</td><td class="text-center p-3"><div class="font-bold text-slate-800">${pct(m.rate)}</div><div class="w-20 h-1.5 bg-slate-100 rounded-full mx-auto mt-1 overflow-hidden"><div class="h-full bg-teal-600 rounded-full" style="width:${Math.min(100,m.rate)}%"></div></div></td></tr>`).join("") : `<tr><td colspan="7" class="p-8 text-center text-slate-400">Belum ada data anggota yang sesuai.</td></tr>`}
+            </tbody></table></div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-2xl soft-shadow p-5">
+            <div class="flex items-center justify-between"><div><h3 class="font-bold text-lg">Detail Anggota</h3><p class="text-sm text-slate-500">Riwayat kehadiran pribadi</p></div><i class="fa-solid fa-user-clock text-teal-700 text-xl"></i></div>
+            <select class="field mt-4" onchange="selectMemberDetail(this.value)">${members.map(m=>`<option value="${escapeHtml(m.id)}" ${m.id===chosenId?"selected":""}>${escapeHtml(m.name)}</option>`).join("")}</select>
+            ${chosen ? `<div class="mt-4 rounded-xl bg-slate-50 p-4"><div class="font-bold">${escapeHtml(chosen.name)}</div><div class="text-xs text-slate-500 mt-1">${escapeHtml(chosen.school)}</div><div class="text-3xl font-bold text-teal-700 mt-3">${pct(chosenStats?.rate || 0)}</div><div class="text-xs text-slate-500">Persentase kehadiran</div><div class="grid grid-cols-2 gap-2 mt-4 text-sm"><div>Hadir <b class="float-right">${chosenStats?.Hadir||0}</b></div><div>Sakit <b class="float-right">${chosenStats?.Sakit||0}</b></div><div>Izin <b class="float-right">${chosenStats?.Izin||0}</b></div><div>Tidak hadir <b class="float-right">${chosenStats?.["Tidak Hadir"]||0}</b></div></div></div>
+            <div class="mt-4"><h4 class="font-semibold text-sm mb-2">Riwayat pertemuan</h4><div class="space-y-2 max-h-80 overflow-y-auto pr-1">${memberDetail.length ? memberDetail.map(x=>`<div class="border border-slate-100 rounded-xl p-3"><div class="flex items-start justify-between gap-2"><div><div class="font-medium text-sm">${escapeHtml(x.meeting.title)}</div><div class="text-xs text-slate-400 mt-1">${formatDate(x.meeting.date)}</div></div>${badge(x.record?.status)}</div>${x.meeting.topic?`<div class="text-xs text-slate-500 mt-1">${escapeHtml(x.meeting.topic)}</div>`:""}</div>`).join("") : `<p class="text-sm text-slate-400">Belum ada pertemuan pada periode ini.</p>`}</div></div>` : `<p class="text-sm text-slate-400 mt-4">Belum ada anggota aktif.</p>`}
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl soft-shadow overflow-hidden">
+          <div class="p-5 border-b border-slate-100"><h3 class="font-bold text-lg">Pertemuan Terbaru</h3><p class="text-sm text-slate-500">Enam kegiatan terakhir pada periode terpilih.</p></div>
+          <div class="divide-y divide-slate-100">${recentMeetings.length ? recentMeetings.map(mt=>{
+            const rows=attendance.filter(a=>a.meetingId===mt.id); const c=rows.filter(a=>a.status==="Hadir").length;
+            return `<div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div class="flex items-start gap-3"><div class="w-11 h-11 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-calendar-check"></i></div><div><div class="font-semibold">${escapeHtml(mt.title)}</div><div class="text-sm text-slate-500 mt-0.5">${formatDate(mt.date)}${mt.place?` · ${escapeHtml(mt.place)}`:""}</div>${mt.topic?`<div class="text-xs text-slate-400 mt-1">${escapeHtml(mt.topic)}</div>`:""}</div></div><div class="text-sm text-slate-600"><span class="font-bold text-teal-700">${c}</span> dari ${members.length} anggota hadir</div></div>`;
+          }).join("") : `<div class="p-8 text-center text-slate-400">Belum ada pertemuan yang dicatat.</div>`}</div>
+        </div>`;
+    }
+    function changeDashboardFilter() { dashboardMonth = document.getElementById("filterMonth").value; renderDashboard(); }
+    function setDashboardSearch(value) { dashboardSearch = value; const pos = document.activeElement?.selectionStart; renderDashboard(); const el = document.querySelector('#dashboardContent input[placeholder="Cari nama atau sekolah..."]'); if(el){el.focus(); if(pos !== null) el.setSelectionRange(pos,pos);} }
+    function selectMemberDetail(id) { selectedMemberId = id; renderDashboard(); }
+
+    function showTab(tab) {
+      currentTab = tab;
+      document.getElementById("page-dashboard").classList.toggle("hidden", tab !== "dashboard");
+      document.getElementById("page-admin").classList.toggle("hidden", tab !== "admin");
+      document.getElementById("nav-dashboard").className = (tab === "dashboard" ? "nav-active" : "text-white hover:bg-white/10") + " rounded-xl px-4 py-2 text-sm font-semibold transition";
+      document.getElementById("nav-admin").className = (tab === "admin" ? "nav-active" : "text-white hover:bg-white/10") + " rounded-xl px-4 py-2 text-sm font-semibold transition";
+      if(tab === "admin") renderAdmin();
+    }
+    function renderAdmin() {
+      const root = document.getElementById("adminContent");
+      const info = document.getElementById("adminSessionInfo");
+      if (!adminToken) {
+        info.textContent = "Akses khusus pengelola";
+        root.innerHTML = `<div class="max-w-md mx-auto bg-white border border-slate-200 rounded-3xl soft-shadow p-6 sm:p-8"><div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-lock"></i></div><h3 class="font-bold text-xl mt-5">Login Administrator</h3><p class="text-sm text-slate-500 mt-1">Masukkan PIN administrator untuk mengelola data kehadiran.</p><form class="mt-6 space-y-4" onsubmit="loginAdmin(event)"><div><label class="block text-sm font-semibold mb-2">PIN Administrator</label><input id="adminPin" class="field" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Masukkan PIN" required /></div><button type="submit" class="btn-primary rounded-xl w-full py-3 font-semibold"><i class="fa-solid fa-right-to-bracket mr-2"></i>Masuk ke panel admin</button></form><div class="mt-4 text-xs text-slate-400">PIN awal setelah setup: <b>123456</b>. Ganti PIN tersebut sebelum aplikasi digunakan.</div></div>`;
+        return;
+      }
+      info.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span>Sesi administrator aktif <button onclick="logoutAdmin()" class="text-red-600 hover:underline ml-2">Keluar</button></span>`;
+      root.innerHTML = `
+        <div class="bg-white border border-slate-200 rounded-2xl soft-shadow p-5 sm:p-6">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><h3 class="text-lg font-bold">Input dan Koreksi Kehadiran</h3><p class="text-sm text-slate-500">Buat pertemuan baru atau muat pertemuan lama untuk diperbaiki.</p></div><div class="flex flex-col sm:flex-row gap-2"><select id="editMeetingSelect" class="field sm:w-64"><option value="">Pilih pertemuan untuk diedit...</option>${[...STORE.meetings].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(m=>`<option value="${escapeHtml(m.id)}">${formatDate(m.date)} — ${escapeHtml(m.title)}</option>`).join("")}</select><button onclick="loadSelectedMeeting()" class="btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold">Muat untuk edit</button><button onclick="clearEditor()" class="btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold"><i class="fa-solid fa-plus mr-1"></i>Baru</button></div></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal pertemuan *</label><input id="meetingDate" class="field" type="date" value="${escapeHtml(editor.date)}" /></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Nama kegiatan *</label><input id="meetingTitle" class="field" type="text" maxlength="150" placeholder="Contoh: Pertemuan Rutin MGMP" value="${escapeHtml(editor.title)}" /></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Materi / agenda</label><input id="meetingTopic" class="field" type="text" maxlength="200" placeholder="Materi atau agenda pertemuan" value="${escapeHtml(editor.topic)}" /></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1.5">Tempat kegiatan</label><input id="meetingPlace" class="field" type="text" maxlength="150" placeholder="Tempat pelaksanaan" value="${escapeHtml(editor.place)}" /></div>
+          </div>
+          <div class="mt-3"><label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan kegiatan</label><textarea id="meetingNotes" class="field" rows="2" maxlength="500" placeholder="Catatan tambahan (opsional)">${escapeHtml(editor.notes)}</textarea></div>
+          <div class="mt-6 border-t border-slate-100 pt-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div><h4 class="font-bold">Daftar Kehadiran Anggota</h4><p class="text-xs text-slate-500 mt-1">Pilih status untuk setiap anggota sebelum menyimpan.</p></div><div class="flex flex-col sm:flex-row gap-2"><input class="field sm:w-56" placeholder="Cari anggota..." value="${escapeHtml(editor.search)}" oninput="setEditorSearch(this.value)" /><button onclick="markAllPresent()" class="rounded-xl px-3 py-2 text-sm font-semibold bg-green-50 text-green-700 hover:bg-green-100"><i class="fa-solid fa-check-double mr-1"></i>Tandai semua Hadir</button></div></div>
+            <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-2" id="editorMemberRows"></div>
+            <div class="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div class="text-xs text-slate-500">Anggota ditampilkan: <b>${STORE.members.filter(m=>m.active!==false).length}</b>. Data lama akan diperbarui, bukan digandakan.</div><button onclick="saveAttendance()" class="btn-primary rounded-xl px-6 py-3 font-semibold"><i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Kehadiran</button></div>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl soft-shadow overflow-hidden"><div class="p-5 border-b border-slate-100"><h3 class="font-bold text-lg">Riwayat Pertemuan</h3><p class="text-sm text-slate-500">Pilih tombol Edit untuk memuat dan memperbaiki data.</p></div><div class="divide-y divide-slate-100">${STORE.meetings.length ? [...STORE.meetings].sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(m=>`<div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div><div class="font-semibold">${escapeHtml(m.title)}</div><div class="text-sm text-slate-500 mt-1">${formatDate(m.date)}${m.place?` · ${escapeHtml(m.place)}`:""}</div>${m.topic?`<div class="text-xs text-slate-400 mt-1">${escapeHtml(m.topic)}</div>`:""}</div><button onclick="loadMeetingForEdit('${escapeHtml(m.id)}')" class="btn-soft rounded-xl px-4 py-2 text-sm font-semibold self-start sm:self-auto"><i class="fa-solid fa-pen-to-square mr-1"></i>Edit data</button></div>`).join("") : `<div class="p-8 text-center text-slate-400">Belum ada pertemuan yang tersimpan.</div>`}</div></div>`;
+      renderEditorRows();
+    }
+    function renderEditorRows() {
+      const root = document.getElementById("editorMemberRows");
+      if (!root) return;
+      const q = (editor.search || "").toLowerCase();
+      const members = STORE.members.filter(m => m.active !== false && (m.name + " " + m.school).toLowerCase().includes(q));
+      root.innerHTML = members.map(m=>`<div class="border border-slate-200 rounded-xl p-3"><div class="flex flex-col sm:flex-row sm:items-center gap-2"><div class="min-w-0 flex-1"><div class="font-semibold text-sm text-slate-800">${escapeHtml(m.name)}</div><div class="text-xs text-slate-400 mt-0.5">${escapeHtml(m.school)}</div></div><select class="field sm:w-40" onchange="setEditorStatus('${escapeHtml(m.id)}',this.value)"><option value="">Pilih status...</option>${STATUS_OPTIONS.map(s=>`<option value="${s}" ${editor.statuses[m.id]===s?"selected":""}>${s}</option>`).join("")}</select></div><input class="field mt-2 text-sm" maxlength="200" placeholder="Catatan anggota (opsional)" value="${escapeHtml(editor.memberNotes[m.id] || "")}" oninput="setEditorNote('${escapeHtml(m.id)}',this.value)" /></div>`).join("");
+      if (!members.length) root.innerHTML = `<div class="col-span-full text-center text-sm text-slate-400 p-6">Anggota tidak ditemukan.</div>`;
+    }
+    function setEditorStatus(id,value) { editor.statuses[id] = value; }
+    function setEditorNote(id,value) { editor.memberNotes[id] = value; }
+    function setEditorSearch(value) {
+      editor.search = value;
+      const pos = document.activeElement?.selectionStart;
+      renderEditorRows();
+      const el = document.querySelector('#adminContent input[placeholder="Cari anggota..."]');
+      if(el){el.focus(); if(pos !== null) el.setSelectionRange(pos,pos);}
+    }
+    function markAllPresent() { STORE.members.filter(m=>m.active!==false).forEach(m=>editor.statuses[m.id]="Hadir"); renderEditorRows(); showToast("Semua anggota ditandai Hadir. Periksa kembali sebelum menyimpan.","info"); }
+    async function loginAdmin(event) {
+      event.preventDefault();
+      const pin = document.getElementById("adminPin").value.trim();
+      try {
+        const result = await apiCall("login", {pin});
+        adminToken = result.token;
+        sessionStorage.setItem("mgmp_admin_token", adminToken);
+        editor = freshEditor();
+        renderAdmin();
+        showToast("Login administrator berhasil.");
+      } catch (error) { showToast(error.message, "error"); }
+    }
+    function logoutAdmin() {
+      adminToken = "";
+      sessionStorage.removeItem("mgmp_admin_token");
+      editor = freshEditor();
+      renderAdmin();
+      showToast("Anda telah keluar dari panel administrator.", "info");
+    }
+    function loadSelectedMeeting() {
+      const id = document.getElementById("editMeetingSelect")?.value;
+      if (!id) return showToast("Pilih pertemuan yang akan diedit.","error");
+      loadMeetingForEdit(id);
+    }
+    function loadMeetingForEdit(id) {
+      const meeting = STORE.meetings.find(m=>m.id===id);
+      if (!meeting) return showToast("Data pertemuan tidak ditemukan.","error");
+      editor = {...freshEditor(), meetingId:meeting.id, date:meeting.date, title:meeting.title, topic:meeting.topic||"", place:meeting.place||"", notes:meeting.notes||""};
+      STORE.attendance.filter(a=>a.meetingId===id).forEach(a=>{editor.statuses[a.memberId]=a.status; editor.memberNotes[a.memberId]=a.note||"";});
+      renderAdmin();
+      const selector = document.getElementById("editMeetingSelect");
+      if(selector) selector.value = id;
+      showToast("Data pertemuan dimuat. Silakan koreksi lalu simpan.","info");
+      window.scrollTo({top:document.getElementById("adminContent").offsetTop - 20,behavior:"smooth"});
+    }
+    function clearEditor() { editor = freshEditor(); renderAdmin(); showToast("Form pertemuan baru siap diisi.","info"); }
+    async function saveAttendance() {
+      if (!adminToken) return showToast("Sesi admin berakhir. Silakan login kembali.","error");
+      const date = document.getElementById("meetingDate").value;
+      const title = document.getElementById("meetingTitle").value.trim();
+      const activeMembers = STORE.members.filter(m=>m.active!==false);
+      if (!date || !title) return showToast("Tanggal dan nama kegiatan wajib diisi.","error");
+      const missing = activeMembers.filter(m=>!STATUS_OPTIONS.includes(editor.statuses[m.id]));
+      if (missing.length) return showToast(`Masih ada ${missing.length} anggota yang belum dipilih status kehadirannya.`,"error");
+      const payload = {
+        meetingId:editor.meetingId,
+        date,
+        title,
+        topic:document.getElementById("meetingTopic").value.trim(),
+        place:document.getElementById("meetingPlace").value.trim(),
+        notes:document.getElementById("meetingNotes").value.trim(),
+        rows:activeMembers.map(m=>({memberId:m.id,status:editor.statuses[m.id],note:editor.memberNotes[m.id]||""}))
+      };
+      const button = document.querySelector('#adminContent button[onclick="saveAttendance()"]');
+      if(button){button.disabled=true; button.innerHTML='<span class="spinner align-middle mr-2"></span>Menyimpan...';}
+      try {
+        const result = await apiCall("saveMeeting", {token:adminToken, data:JSON.stringify(payload)});
+        await loadData();
+        editor = freshEditor();
+        renderAdmin();
+        showToast(result.message || "Data kehadiran berhasil disimpan.");
+      } catch (error) {
+        if (/sesi|PIN|login/i.test(error.message)) { adminToken=""; sessionStorage.removeItem("mgmp_admin_token"); renderAdmin(); }
+        showToast(error.message,"error");
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", loadData);
+  </script>
+</body>
+</html>
